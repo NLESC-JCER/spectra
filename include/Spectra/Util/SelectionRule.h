@@ -13,6 +13,8 @@
 #include <complex>    // std::complex
 #include <utility>    // std::pair
 #include <stdexcept>  // std::invalid_argument
+
+#include <Eigen/Core>
 #include "TypeTraits.h"
 
 namespace Spectra {
@@ -220,6 +222,76 @@ public:
     inline IndexArray index() const { return m_index; }
     inline void swap(IndexArray& other) { m_index.swap(other); }
 };
+
+// Sort values[:len] according to the selection rule, and return the indices
+template <typename Scalar>
+std::vector<Eigen::Index> argsort(SortRule selection, const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& values, Eigen::Index len)
+{
+    using Index = Eigen::Index;
+
+    // Sort Ritz values and put the wanted ones at the beginning
+    std::vector<Index> ind;
+    switch (selection)
+    {
+        case SortRule::LargestMagn:
+        {
+            SortEigenvalue<Scalar, SortRule::LargestMagn> sorting(values.data(), len);
+            sorting.swap(ind);
+            break;
+        }
+        case SortRule::BothEnds:
+        case SortRule::LargestAlge:
+        {
+            SortEigenvalue<Scalar, SortRule::LargestAlge> sorting(values.data(), len);
+            sorting.swap(ind);
+            break;
+        }
+        case SortRule::SmallestMagn:
+        {
+            SortEigenvalue<Scalar, SortRule::SmallestMagn> sorting(values.data(), len);
+            sorting.swap(ind);
+            break;
+        }
+        case SortRule::SmallestAlge:
+        {
+            SortEigenvalue<Scalar, SortRule::SmallestAlge> sorting(values.data(), len);
+            sorting.swap(ind);
+            break;
+        }
+        default:
+            throw std::invalid_argument("unsupported selection rule");
+    }
+
+    // For SortRule::BothEnds, the eigenvalues are sorted according to the
+    // SortRule::LargestAlge rule, so we need to move those smallest values to the left
+    // The order would be
+    //     Largest => Smallest => 2nd largest => 2nd smallest => ...
+    // We keep this order since the first k values will always be
+    // the wanted collection, no matter k is nev_updated (used in SymEigsBase::restart())
+    // or is nev (used in SymEigsBase::sort_ritzpair())
+    if (selection == SortRule::BothEnds)
+    {
+        std::vector<Index> ind_copy(ind);
+        for (Index i = 0; i < len; i++)
+        {
+            // If i is even, pick values from the left (large values)
+            // If i is odd, pick values from the right (small values)
+            if (i % 2 == 0)
+                ind[i] = ind_copy[i / 2];
+            else
+                ind[i] = ind_copy[len - 1 - i / 2];
+        }
+    }
+
+    return ind;
+}
+
+// Default vector length
+template <typename Scalar>
+std::vector<Eigen::Index> argsort(SortRule selection, const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& values)
+{
+    return argsort<Scalar>(selection, values, values.size());
+}
 
 /// \endcond
 

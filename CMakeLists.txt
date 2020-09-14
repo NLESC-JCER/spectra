@@ -4,7 +4,11 @@ project (Spectra VERSION 1.0.0 LANGUAGES CXX)
 # Make CMake look into the ./cmake/ folder for configuration files
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-
+include(FeatureSummary)
+include(CheckCXXCompilerFlag)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
 
 # Supported options
 # -----------------
@@ -38,6 +42,8 @@ if(ENABLE_COVERAGE_BUILD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} --coverage")
 endif()
+
+add_subdirectory(examples)
 
 if(BUILD_TESTS)
     enable_testing()
@@ -86,7 +92,7 @@ install(
     DESTINATION cmake
 )
 
-find_package(CLANG_FORMAT 7.0.1)
+find_package(CLANG_FORMAT 9)
 if(CLANG_FORMAT_FOUND)
     file(GLOB_RECURSE FORMAT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
     add_custom_target(
